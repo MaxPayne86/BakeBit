@@ -154,7 +154,7 @@ def draw_page():
         bottom = height-padding
         # Move left to right keeping track of the current x position for drawing shapes.
         x = 0
-	IPAddress = get_ip()
+        IPAddress = get_ip()
         cmd = "top -bn1 | grep load | awk '{printf \"CPU Load: %.2f\", $(NF-2)}'"
         CPU = subprocess.check_output(cmd, shell = True )
         cmd = "free -m | awk 'NR==2{printf \"Mem: %s/%sMB %.2f%%\", $3,$2,$3*100/$2 }'"
@@ -224,10 +224,11 @@ def receive_signal(signum, stack):
     lock.release()
 
     if page_index==5:
+        print('return')
         return
 
     if signum == signal.SIGUSR1:
-        print 'K1 pressed'
+        print('K1 pressed')
         if is_showing_power_msgbox():
             if page_index==3:
                 update_page_index(4)
@@ -239,7 +240,7 @@ def receive_signal(signum, stack):
             draw_page()
 
     if signum == signal.SIGUSR2:
-        print 'K2 pressed'
+        print('K2 pressed')
         if is_showing_power_msgbox():
             if page_index==4:
                 update_page_index(5)
@@ -253,7 +254,7 @@ def receive_signal(signum, stack):
             draw_page()
 
     if signum == signal.SIGALRM:
-        print 'K3 pressed'
+        print('K3 pressed')
         if is_showing_power_msgbox():
             update_page_index(0)
             draw_page()
@@ -294,7 +295,7 @@ while True:
                     time.sleep(.1)
                     continue
             time.sleep(1)
-            os.system('systemctl poweroff')
+            os.system('shutdown -k -t now')
             break
         time.sleep(1)
     except KeyboardInterrupt:                                                                                                          
