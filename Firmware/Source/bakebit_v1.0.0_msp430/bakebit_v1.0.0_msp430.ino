@@ -181,7 +181,7 @@ __interrupt void USI_TXRX (void)
       {
         sendAck();
         I2C_State = PrepareTransmitData;      // Go to next state: TX data
-        P1OUT &= ~LED_ROSSO;            // LED rosso off
+        P1OUT &= ~LED_ROSSO;                  // LED rosso off
       }
       else if(USISRL == WRITE_ADDRESS)
       {
@@ -189,12 +189,11 @@ __interrupt void USI_TXRX (void)
         RxCount = 0;
         I2C_State = PrepareReceiveData;
       }
+      else
       {
         // Not my address!
         USICNT |= USISCLREL;            // No: release hold on SCL
         I2C_State = Idle;
-        i2c_error = address_err;
-        P1OUT |= LED_ROSSO;             // LED on: error
       }
       break;
     case PrepareReceiveData:
@@ -206,12 +205,14 @@ __interrupt void USI_TXRX (void)
       // TODO: verify lock before writing Data into buffer
       RxData[RxCount++] = USISRL;       // Save data into rx buffer
       sendAck();
-      if(RxCount == 4)
+      if(RxCount == N_CMD)
       {
         RxCount = 0;
-        RxQueue = 4;
+        RxQueue = N_CMD;
         I2C_State = Finish;
       }
+      else
+        I2C_State = PrepareReceiveData;
       break;
     case PrepareTransmitData:
       USISRL = TxData[TxCount++];       // Load first byte
@@ -221,15 +222,7 @@ __interrupt void USI_TXRX (void)
     case PrepareReceiveAck:// Receive Data (N)Ack
       USICTL0 &= ~USIOE;    // SDA = input
       USICNT |= 1;          // Bit counter = 1, receive (N)Ack
-      if (TxCount == TxQueue) // Has last byte been sent?
-      { 
-        I2C_State = Finish;   // Yes: transmission finished
-        TxQueue = 0;
-      }
-      else
-      {
-        I2C_State = ReceiveAck;  // Check acknowledgment next
-      }
+      I2C_State = ReceiveAck;  // Check acknowledgment next
       break;
     case ReceiveAck:// Process Data Ack/NAck
       if ((USISRL & BIT0) != 0)         // Received Nack or Ack?
@@ -241,10 +234,19 @@ __interrupt void USI_TXRX (void)
       }
       else                              // Ack received
       {
-        USISRL = TxData[TxCount++];     // Load next byte of data
-        USICTL0 |= USIOE;               // Enable output
-        USICNT |= 8;                    // Send 8 bits
-        I2C_State = PrepareReceiveAck;  // Receive acknowledgment next
+        if (TxCount == TxQueue) // Has last byte been sent?
+        {
+          USICNT |= USISCLREL;      // Release hold on SCL
+          I2C_State = Idle;
+          TxQueue = 0;
+        }
+        else
+        {
+          USISRL = TxData[TxCount++];     // Load next byte of data
+          USICTL0 |= USIOE;               // Enable output
+          USICNT |= 8;                    // Send 8 bits
+          I2C_State = PrepareReceiveAck;  // Receive acknowledgment next
+        }
       }
       break;
     case Finish:
